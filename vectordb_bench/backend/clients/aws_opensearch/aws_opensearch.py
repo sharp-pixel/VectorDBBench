@@ -1,27 +1,29 @@
 import logging
-from contextlib import contextmanager
 import time
-from typing import Iterable, Type
-from ..api import VectorDB, DBCaseConfig, DBConfig, IndexType
-from .config import AWSOpenSearchConfig, AWSOpenSearchIndexConfig
+from contextlib import contextmanager
+from typing import Iterable
+
 from opensearchpy import OpenSearch
-from opensearchpy.helpers import bulk
+
+from .config import AWSOpenSearchConfig, AWSOpenSearchIndexConfig
+from ..api import VectorDB, IndexType
 
 log = logging.getLogger(__name__)
 
 
 class AWSOpenSearch(VectorDB):
     def __init__(
-        self,
-        dim: int,
-        db_config: dict,
-        db_case_config: AWSOpenSearchIndexConfig,
-        index_name: str = "vdb_bench_index",  # must be lowercase
-        id_col_name: str = "id",
-        vector_col_name: str = "embedding",
-        drop_old: bool = False,
-        **kwargs,
+            self,
+            dim: int,
+            db_config: dict,
+            db_case_config: AWSOpenSearchIndexConfig,
+            index_name: str = "vdb_bench_index",  # must be lowercase
+            id_col_name: str = "id",
+            vector_col_name: str = "embedding",
+            drop_old: bool = False,
+            **kwargs,
     ):
+        self.client = None
         self.dim = dim
         self.db_config = db_config
         self.case_config = db_case_config
@@ -47,7 +49,7 @@ class AWSOpenSearch(VectorDB):
 
     @classmethod
     def case_config_cls(
-        cls, index_type: IndexType | None = None
+            cls, index_type: IndexType | None = None
     ) -> AWSOpenSearchIndexConfig:
         return AWSOpenSearchIndexConfig
 
@@ -92,18 +94,18 @@ class AWSOpenSearch(VectorDB):
         del self.client
 
     def insert_embeddings(
-        self,
-        embeddings: Iterable[list[float]],
-        metadata: list[int],
-        **kwargs,
+            self,
+            embeddings: Iterable[list[float]],
+            metadata: list[int],
+            **kwargs,
     ) -> tuple[int, Exception]:
         """Insert the embeddings to the elasticsearch."""
         assert self.client is not None, "should self.init() first"
 
         insert_data = []
-        for i in range(len(embeddings)):
+        for i, v in enumerate(embeddings):
             insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
-            insert_data.append({self.vector_col_name: embeddings[i]})
+            insert_data.append({self.vector_col_name: v})
         try:
             resp = self.client.bulk(insert_data)
             log.info(f"AWS_OpenSearch adding documents: {len(resp['items'])}")
@@ -116,10 +118,10 @@ class AWSOpenSearch(VectorDB):
             return self.insert_embeddings(embeddings, metadata)
 
     def search_embedding(
-        self,
-        query: list[float],
-        k: int = 100,
-        filters: dict | None = None,
+            self,
+            query: list[float],
+            k: int = 100,
+            filters: dict | None = None,
     ) -> list[int]:
         """Get k most similar embeddings to query vector.
 
@@ -136,6 +138,9 @@ class AWSOpenSearch(VectorDB):
         body = {
             "size": k,
             "query": {"knn": {self.vector_col_name: {"vector": query, "k": k}}},
+            "_source": {
+                "exclude": self.vector_col_name
+            }
         }
         try:
             resp = self.client.search(index=self.index_name, body=body)
@@ -152,6 +157,11 @@ class AWSOpenSearch(VectorDB):
 
     def optimize(self):
         """optimize will be called between insertion and search in performance cases."""
+        assert self.client is not None, "should self.init() first"
+
+        # Warm up the index
+        self.client.transport.perform_request(
+            "GET", f"/_plugins/_knn/warmup/{self.index_name}")
         pass
 
     def ready_to_load(self):
