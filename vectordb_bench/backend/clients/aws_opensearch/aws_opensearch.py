@@ -5,7 +5,7 @@ from typing import Iterable
 
 from opensearchpy import OpenSearch
 
-from .config import AWSOpenSearchConfig, AWSOpenSearchIndexConfig
+from .config import AWSOpenSearchConfig, AWSOpenSearchIndexConfig, AWSOS_Engine
 from ..api import VectorDB, IndexType
 
 log = logging.getLogger(__name__)
@@ -57,8 +57,8 @@ class AWSOpenSearch(VectorDB):
         settings = {
             "index": {
                 "knn": True,
-                # "number_of_shards": 5,
-                # "refresh_interval": "600s",
+                "refresh_interval": "-1",
+                "number_of_replicas": 0
             }
         }
         mappings = {
@@ -103,15 +103,19 @@ class AWSOpenSearch(VectorDB):
         assert self.client is not None, "should self.init() first"
 
         insert_data = []
+        count = 0
         for i, v in enumerate(embeddings):
             insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
             insert_data.append({self.vector_col_name: v})
+            count += 1
+
         try:
+            log.info(f"AWS_OpenSearch adding {count} documents")
             resp = self.client.bulk(insert_data)
-            log.info(f"AWS_OpenSearch adding documents: {len(resp['items'])}")
+            log.info(f"AWS_OpenSearch added documents: {len(resp['items'])}")
             resp = self.client.indices.stats(self.index_name)
             log.info(f"Total document count in index: {resp['_all']['primaries']['indexing']['index_total']}")
-            return (len(embeddings), None)
+            return (count, None)
         except Exception as e:
             log.warning(f"Failed to insert data: {self.index_name} error: {str(e)}")
             time.sleep(10)
@@ -159,11 +163,21 @@ class AWSOpenSearch(VectorDB):
         """optimize will be called between insertion and search in performance cases."""
         assert self.client is not None, "should self.init() first"
 
+        self.client.transport.perform_request(
+            "PUT", f"/{self.index_name}/_settings",
+            body={"index": {"refresh_interval": "60s", "number_of_replicas": 1}}
+        )
+
+        self.client.transport.perform_request("POST", f"/{self.index_name}/_refresh")
+
         # Warm up the index
         self.client.transport.perform_request(
             "GET", f"/_plugins/_knn/warmup/{self.index_name}")
-        pass
+
 
     def ready_to_load(self):
         """ready_to_load will be called before load in load cases."""
         pass
+
+    def need_normalize_cosine(self) -> bool:
+        return self.case_config.index_param().get("engine") == AWSOS_Engine.faiss

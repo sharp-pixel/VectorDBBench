@@ -39,7 +39,10 @@ class AWSOpenSearchIndexConfig(BaseModel, DBCaseConfig):
         if self.metric_type == MetricType.IP:
             return "innerproduct"  # only support faiss / nmslib, not for Lucene.
         elif self.metric_type == MetricType.COSINE:
-            return "cosinesimil"
+            if self.engine == AWSOS_Engine.faiss:
+                return "innerproduct"
+            else:
+                return "cosinesimil"
         return "l2"
 
     def index_param(self) -> dict:
