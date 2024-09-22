@@ -106,8 +106,7 @@ class AWSOpenSearch(VectorDB):
         count = 0
 
         for i, v in enumerate(embeddings):
-            insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
-            insert_data.append({self.vector_col_name: v})
+            insert_data.append({"_index": self.index_name, "_id": metadata[i], self.vector_col_name: v})
             count += 1
 
         try:
