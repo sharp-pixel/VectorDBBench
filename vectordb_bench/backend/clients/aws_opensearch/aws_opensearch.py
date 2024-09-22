@@ -71,7 +71,7 @@ class AWSOpenSearch(VectorDB):
                 self.vector_col_name: {
                     "type": "knn_vector",
                     "dimension": self.dim,
-                    "method": self.case_config.index_param(),
+                    "method": self.case_config.index_param()
                 },
             }
         }
@@ -180,4 +180,6 @@ class AWSOpenSearch(VectorDB):
         pass
 
     def need_normalize_cosine(self) -> bool:
-        return self.case_config.index_param().get("engine") == AWSOS_Engine.faiss
+        result =  self.case_config.index_param().get("engine") == AWSOS_Engine.faiss
+        log.info(f"Normalize cosine?: {result}")
+        return result
