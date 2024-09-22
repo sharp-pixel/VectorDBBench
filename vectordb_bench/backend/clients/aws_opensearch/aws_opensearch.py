@@ -3,10 +3,11 @@ import time
 from contextlib import contextmanager
 from typing import Iterable
 
+import numpy as np
 from opensearchpy import OpenSearch
 
 from .config import AWSOpenSearchConfig, AWSOpenSearchIndexConfig, AWSOS_Engine
-from ..api import VectorDB, IndexType
+from ..api import VectorDB, IndexType, MetricType
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +107,12 @@ class AWSOpenSearch(VectorDB):
         count = 0
         for i, v in enumerate(embeddings):
             insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
+            # Normalize the embeddings if needed
+            if self.case_config.metric_type == MetricType.COSINE and self.need_normalize_cosine():
+                nv = np.array(v)
+                norm = np.linalg.norm(nv)
+                v = (nv / norm)
+
             insert_data.append({self.vector_col_name: v})
             count += 1
 
