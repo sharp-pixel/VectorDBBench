@@ -106,21 +106,13 @@ class AWSOpenSearch(VectorDB):
         insert_data = []
         count = 0
 
-        engine = self.case_config.index_param().get("engine")
-        metric = self.case_config.metric_type.value
-        log.info(
-            f"For normalization: Engine: {engine}, Metric: {metric}")
-
         for i, v in enumerate(embeddings):
             insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
             # Normalize the embeddings if needed
-            if self.case_config.metric_type == MetricType.COSINE and self.need_normalize_cosine():
-                log.info("Normalizing")
+            if self.need_normalize_cosine():
                 nv = np.array(v)
                 norm = np.linalg.norm(nv)
-                v = (nv / norm)
-            else:
-                log.info("Not normalizing")
+                v = (nv / norm).tolist()
 
             insert_data.append({self.vector_col_name: v})
             count += 1
@@ -196,7 +188,7 @@ class AWSOpenSearch(VectorDB):
         pass
 
     def need_normalize_cosine(self) -> bool:
-        engine = self.case_config.index_param().get("engine")
+        engine = self.case_config.engine
         metric = self.case_config.metric_type
         if engine == AWSOS_Engine.faiss and metric == MetricType.COSINE:
             return True
