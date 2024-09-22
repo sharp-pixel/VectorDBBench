@@ -109,10 +109,10 @@ class AWSOpenSearch(VectorDB):
         for i, v in enumerate(embeddings):
             insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
             # Normalize the embeddings if needed
-            if self.need_normalize_cosine():
-                nv = np.array(v)
-                norm = np.linalg.norm(nv)
-                v = (nv / norm).tolist()
+            # if self.need_normalize_cosine():
+            #     nv = np.array(v)
+            #     norm = np.linalg.norm(nv)
+            #     v = (nv / norm).tolist()
 
             insert_data.append({self.vector_col_name: v})
             count += 1
