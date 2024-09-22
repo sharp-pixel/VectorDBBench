@@ -3,8 +3,7 @@ import time
 from contextlib import contextmanager
 from typing import Iterable
 
-import numpy as np
-from opensearchpy import OpenSearch
+from opensearchpy import OpenSearch, helpers
 
 from .config import AWSOpenSearchConfig, AWSOpenSearchIndexConfig, AWSOS_Engine
 from ..api import VectorDB, IndexType, MetricType
@@ -108,19 +107,21 @@ class AWSOpenSearch(VectorDB):
 
         for i, v in enumerate(embeddings):
             insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
-            # Normalize the embeddings if needed
-            # if self.need_normalize_cosine():
-            #     nv = np.array(v)
-            #     norm = np.linalg.norm(nv)
-            #     v = (nv / norm).tolist()
-
             insert_data.append({self.vector_col_name: v})
             count += 1
 
         try:
             log.info(f"AWS_OpenSearch adding {count} documents")
-            resp = self.client.bulk(insert_data)
-            log.info(f"AWS_OpenSearch added documents: {len(resp['items'])}")
+
+            succeeded = []
+            failed = []
+            for success, item in helpers.parallel_bulk(self.client, actions=insert_data):
+                if success:
+                    succeeded.append(item)
+                else:
+                    failed.append(item)
+
+            log.info(f"AWS_OpenSearch added documents: {len(succeeded)}")
             resp = self.client.indices.stats(self.index_name)
             log.info(f"Total document count in index: {resp['_all']['primaries']['indexing']['index_total']}")
             return (count, None)
@@ -181,7 +182,6 @@ class AWSOpenSearch(VectorDB):
         # Warm up the index
         self.client.transport.perform_request(
             "GET", f"/_plugins/_knn/warmup/{self.index_name}")
-
 
     def ready_to_load(self):
         """ready_to_load will be called before load in load cases."""
