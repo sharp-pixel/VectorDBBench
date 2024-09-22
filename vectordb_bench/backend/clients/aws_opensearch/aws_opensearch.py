@@ -106,8 +106,10 @@ class AWSOpenSearch(VectorDB):
         insert_data = []
         count = 0
 
+        engine = self.case_config.index_param().get("engine")
+        metric = self.case_config.metric_type.value
         log.info(
-            f"For normalization: Engine: {self.case_config.index_param().get("engine")}, Metric: {self.case_config.index_param().get("metric_type")}")
+            f"For normalization: Engine: {engine}, Metric: {metric}")
 
         for i, v in enumerate(embeddings):
             insert_data.append({"index": {"_index": self.index_name, "_id": metadata[i]}})
