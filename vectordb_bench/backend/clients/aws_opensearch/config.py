@@ -31,7 +31,7 @@ class AWSOS_Engine(Enum):
 
 class AWSOpenSearchIndexConfig(BaseModel, DBCaseConfig):
     metric_type: MetricType = MetricType.L2
-    engine: AWSOS_Engine = AWSOS_Engine.nmslib
+    engine: AWSOS_Engine = AWSOS_Engine.faiss
     efConstruction: int = 360
     M: int = 30
 
