@@ -98,7 +98,7 @@ class AWSOpenSearch(VectorDB):
             embeddings: Iterable[list[float]],
             metadata: list[int],
             **kwargs,
-    ) -> tuple[int, Exception]:
+    ) -> tuple[int, Exception | None]:
         """Insert the embeddings to the elasticsearch."""
         assert self.client is not None, "should self.init() first"
 
@@ -114,7 +114,7 @@ class AWSOpenSearch(VectorDB):
 
             succeeded = []
             failed = []
-            for success, item in helpers.parallel_bulk(self.client, actions=insert_data, thread_count=16, queue_size=16):
+            for success, item in helpers.parallel_bulk(self.client, actions=insert_data, thread_count=8, queue_size=16):
                 if success:
                     succeeded.append(item)
                 else:
@@ -123,7 +123,7 @@ class AWSOpenSearch(VectorDB):
             log.info(f"AWS_OpenSearch added documents: {len(succeeded)}")
             resp = self.client.indices.stats(self.index_name)
             log.info(f"Total document count in index: {resp['_all']['primaries']['indexing']['index_total']}")
-            return (count, None)
+            return count, None
         except Exception as e:
             log.warning(f"Failed to insert data: {self.index_name} error: {str(e)}")
             time.sleep(10)
