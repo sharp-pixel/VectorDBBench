@@ -119,7 +119,7 @@ class AWSOpenSearch(VectorDB):
 
             succeeded = []
             failed = []
-            for success, item in helpers.parallel_bulk(self.client, actions=insert_data, thread_count=8):
+            for success, item in helpers.parallel_bulk(self.client, actions=insert_data, thread_count=16, queue_size=16):
                 if success:
                     succeeded.append(item)
                 else:
