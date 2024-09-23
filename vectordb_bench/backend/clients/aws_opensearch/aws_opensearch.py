@@ -58,12 +58,7 @@ class AWSOpenSearch(VectorDB):
             "index": {
                 "knn": True,
                 "refresh_interval": "-1",
-                "number_of_replicas": 0,
-                "search": {
-                    "concurrent_segment_search": {
-                        "enabled": True
-                    }
-                }
+                "number_of_replicas": 0
             }
         }
         mappings = {
