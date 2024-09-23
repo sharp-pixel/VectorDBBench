@@ -58,7 +58,12 @@ class AWSOpenSearch(VectorDB):
             "index": {
                 "knn": True,
                 "refresh_interval": "-1",
-                "number_of_replicas": 0
+                "number_of_replicas": 0,
+                "search": {
+                    "concurrent_segment_search": {
+                        "enabled": True
+                    }
+                }
             }
         }
         mappings = {
@@ -114,7 +119,7 @@ class AWSOpenSearch(VectorDB):
 
             succeeded = []
             failed = []
-            for success, item in helpers.parallel_bulk(self.client, actions=insert_data):
+            for success, item in helpers.parallel_bulk(self.client, actions=insert_data, thread_count=8):
                 if success:
                     succeeded.append(item)
                 else:
