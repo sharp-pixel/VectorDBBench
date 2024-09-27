@@ -58,7 +58,8 @@ class AWSOpenSearch(VectorDB):
             "index": {
                 "knn": True,
                 "refresh_interval": "-1",
-                "number_of_replicas": 0
+                "number_of_replicas": 0,
+                "number_of_shards": 5,
             }
         }
         mappings = {
@@ -177,6 +178,8 @@ class AWSOpenSearch(VectorDB):
         )
 
         self.client.transport.perform_request("POST", f"/{self.index_name}/_refresh")
+
+        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge")
 
         # Warm up the index
         self.client.transport.perform_request(
