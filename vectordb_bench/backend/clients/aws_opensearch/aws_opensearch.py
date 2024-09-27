@@ -23,7 +23,7 @@ class AWSOpenSearch(VectorDB):
             drop_old: bool = False,
             **kwargs,
     ):
-        self.client = None
+        self.client: OpenSearch | None = None
         self.dim = dim
         self.db_config = db_config
         self.case_config = db_case_config
@@ -172,14 +172,20 @@ class AWSOpenSearch(VectorDB):
         """optimize will be called between insertion and search in performance cases."""
         assert self.client is not None, "should self.init() first"
 
+        # Force merge get reduce number of segments and reduce latency.
+        # WARNING: This is slow and the performance test may time out.
+        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge?max_num_segments=1")
+
+        # Enable Concurrent Segment Search if supported
+        #self.client.cluster.put_settings(body={"persistent": {"search.concurrent_segment_search.enabled": True}})
+
+        #
         self.client.transport.perform_request(
             "PUT", f"/{self.index_name}/_settings",
             body={"index": {"refresh_interval": "60s", "number_of_replicas": 1}}
         )
 
         self.client.transport.perform_request("POST", f"/{self.index_name}/_refresh")
-
-        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge")
 
         # Warm up the index
         self.client.transport.perform_request(
