@@ -1,7 +1,7 @@
 import logging
 import time
 from contextlib import contextmanager
-from typing import Iterable
+from typing import Iterable, Type
 
 from opensearchpy import OpenSearch, helpers
 
@@ -44,22 +44,24 @@ class AWSOpenSearch(VectorDB):
             self._create_index(client)
 
     @classmethod
-    def config_cls(cls) -> AWSOpenSearchConfig:
+    def config_cls(cls) -> Type[AWSOpenSearchConfig]:
         return AWSOpenSearchConfig
 
     @classmethod
     def case_config_cls(
             cls, index_type: IndexType | None = None
-    ) -> AWSOpenSearchIndexConfig:
+    ) -> Type[AWSOpenSearchIndexConfig]:
         return AWSOpenSearchIndexConfig
 
     def _create_index(self, client: OpenSearch):
+        number_of_shards = 20 # optimize for 10M vectors, dim=768
+
         settings = {
             "index": {
                 "knn": True,
                 "refresh_interval": "-1",
                 "number_of_replicas": 0,
-                "number_of_shards": 5,
+                "number_of_shards": number_of_shards,
             }
         }
         mappings = {
@@ -174,7 +176,7 @@ class AWSOpenSearch(VectorDB):
 
         # Force merge get reduce number of segments and reduce latency.
         # WARNING: This is slow and the performance test may time out.
-        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge?max_num_segments=1")
+        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge?max_num_segments=5")
 
         # Enable Concurrent Segment Search if supported
         #self.client.cluster.put_settings(body={"persistent": {"search.concurrent_segment_search.enabled": True}})
