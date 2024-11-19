@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import SecretStr, BaseModel
 
-from ..api import DBConfig, DBCaseConfig, MetricType, IndexType
+from ..api import DBConfig, DBCaseConfig, MetricType
 
 
 class AWSOpenSearchConfig(DBConfig, BaseModel):
@@ -52,7 +52,14 @@ class AWSOpenSearchIndexConfig(BaseModel, DBCaseConfig):
             "engine": self.engine.value,
             "parameters": {
                 "ef_construction": self.efConstruction,
-                "m": self.M
+                "m": self.M,
+                "encoder": {
+                    "name": "sq",
+                    "parameters": {
+                        "type": "fp16",
+                        "clip": True
+                    }
+                }
             }
         }
         return params

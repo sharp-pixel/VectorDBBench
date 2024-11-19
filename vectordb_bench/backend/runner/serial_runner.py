@@ -18,7 +18,7 @@ from vectordb_bench.backend.dataset import DatasetManager
 
 NUM_PER_BATCH = config.NUM_PER_BATCH
 LOAD_MAX_TRY_COUNT = 10
-WAITTING_TIME = 60
+WAITING_TIME = 60
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ class SerialInsertRunner:
                     already_insert_count += insert_count
                     if error is not None:
                         retry_count += 1
-                        time.sleep(WAITTING_TIME)
+                        time.sleep(WAITING_TIME)
 
                         log.info(f"Failed to insert data, try {retry_count} time")
                         if retry_count >= LOAD_MAX_TRY_COUNT:

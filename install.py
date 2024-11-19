@@ -20,7 +20,7 @@ def build(tag, args, dockerfile):
         q = ""
 
     try:
-        command = 'docker build %s --rm -t %s -f' \
+        command = 'finch build %s --rm -t %s -f' \
                    % (q, tag)
         command += ' %s .' % dockerfile
         print(command)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     print('Building base image...')
 
     subprocess.check_call(
-        'docker build \
+        'finch build \
         --rm -t %s -f %s .' % (docker_tag_base(), dockerfile_path_base()), shell=True)
 
     print('Building end.')

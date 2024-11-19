@@ -54,7 +54,7 @@ class AWSOpenSearch(VectorDB):
         return AWSOpenSearchIndexConfig
 
     def _create_index(self, client: OpenSearch):
-        number_of_shards = 20 # optimize for 10M vectors, dim=768
+        number_of_shards = 5
 
         settings = {
             "index": {
@@ -176,7 +176,7 @@ class AWSOpenSearch(VectorDB):
 
         # Force merge get reduce number of segments and reduce latency.
         # WARNING: This is slow and the performance test may time out.
-        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge?max_num_segments=5")
+        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge?max_num_segments=1")
 
         # Enable Concurrent Segment Search if supported
         #self.client.cluster.put_settings(body={"persistent": {"search.concurrent_segment_search.enabled": True}})
