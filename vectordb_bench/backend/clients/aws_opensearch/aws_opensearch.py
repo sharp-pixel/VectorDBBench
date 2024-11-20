@@ -176,7 +176,7 @@ class AWSOpenSearch(VectorDB):
 
         # Force merge get reduce number of segments and reduce latency.
         # WARNING: This is slow and the performance test may time out.
-        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge?max_num_segments=1")
+        self.client.transport.perform_request("POST", f"/{self.index_name}/_forcemerge")
 
         # Enable Concurrent Segment Search if supported
         #self.client.cluster.put_settings(body={"persistent": {"search.concurrent_segment_search.enabled": True}})
