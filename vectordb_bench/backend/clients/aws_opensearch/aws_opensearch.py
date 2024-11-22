@@ -54,7 +54,7 @@ class AWSOpenSearch(VectorDB):
         return AWSOpenSearchIndexConfig
 
     def _create_index(self, client: OpenSearch):
-        number_of_shards = 1
+        number_of_shards = 5
 
         settings = {
             "index": {
