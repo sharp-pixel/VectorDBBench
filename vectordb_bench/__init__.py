@@ -1,3 +1,8 @@
+"""VectorDBBench configuration module.
+
+This module contains the main configuration class and environment variable handling
+for the VectorDBBench application.
+"""
 import inspect
 import pathlib
 
@@ -9,7 +14,8 @@ env = environs.Env()
 env.read_env(path=".env", recurse=False)
 
 
-class config:
+class Config:
+    """Configuration class for VectorDBBench application settings."""
     ALIYUN_OSS_URL = "assets.zilliz.com.cn/benchmark/"
     AWS_S3_URL = "assets.zilliz.com/benchmark/"
 
@@ -71,11 +77,19 @@ class config:
     OPTIMIZE_TIMEOUT_1024D_10M = 240 * 3600  # 10d
 
     def display(self) -> str:
+        """Display configuration attributes excluding methods, private attributes, and timeouts.
+        
+        Returns:
+            List of configuration attributes as tuples.
+        """
         return [
             i
             for i in inspect.getmembers(self)
-            if not inspect.ismethod(i[1]) and not i[0].startswith("_") and "TIMEOUT" not in i[0]
+            if not inspect.ismethod(i[1])
+            and not i[0].startswith("_")
+            and "TIMEOUT" not in i[0]
         ]
 
 
+config = Config()
 log_util.init(config.LOG_LEVEL)

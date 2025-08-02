@@ -79,7 +79,7 @@ class AWSOpenSearch(VectorDB):
                 "knn.memory.circuit_breaker.limit": self.case_config.cb_threshold,
             }
         }
-        client.cluster.put_settings(cluster_settings_body)
+        client.cluster.put_settings(body=cluster_settings_body)
         settings = {
             "index": {
                 "knn": True,
@@ -489,7 +489,7 @@ class AWSOpenSearch(VectorDB):
         cluster_settings_body = {
             "persistent": {"knn.algo_param.index_thread_qty": self.case_config.index_thread_qty_during_force_merge}
         }
-        self.client.cluster.put_settings(cluster_settings_body)
+        self.client.cluster.put_settings(body=cluster_settings_body)
 
         log.info("Updating the graph threshold to ensure that during merge we can do graph creation.")
         output = self.client.indices.put_settings(

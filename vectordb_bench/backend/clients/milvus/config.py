@@ -1,4 +1,4 @@
-from pydantic import BaseModel, SecretStr, validator
+from pydantic import BaseModel, SecretStr, field_validator
 
 from ..api import DBCaseConfig, DBConfig, IndexType, MetricType, SQType
 
@@ -17,12 +17,13 @@ class MilvusConfig(DBConfig):
             "num_shards": self.num_shards,
         }
 
-    @validator("*")
-    def not_empty_field(cls, v: any, field: any):
+    @field_validator("*", mode="before")
+    @classmethod
+    def not_empty_field(cls, v: any, info):
         if (
-            field.name in cls.common_short_configs()
-            or field.name in cls.common_long_configs()
-            or field.name in ["user", "password"]
+            info.field_name in cls.common_short_configs()
+            or info.field_name in cls.common_long_configs()
+            or info.field_name in ["user", "password"]
         ):
             return v
         if isinstance(v, str | SecretStr) and len(v) == 0:

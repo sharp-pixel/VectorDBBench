@@ -12,7 +12,7 @@ from enum import Enum
 import pandas as pd
 import polars as pl
 from pyarrow.parquet import ParquetFile
-from pydantic import PrivateAttr, validator
+from pydantic import PrivateAttr, field_validator
 
 from vectordb_bench import config
 from vectordb_bench.base import BaseModel
@@ -57,10 +57,12 @@ class BaseDataset(BaseModel):
     gt_id_field: str = "id"
     gt_neighbors_field: str = "neighbors_id"
 
-    @validator("size")
+    @field_validator("size")
+    @classmethod
     def verify_size(cls, v: int):
-        if v not in cls._size_label:
-            msg = f"Size {v} not supported for the dataset, expected: {cls._size_label.keys()}"
+        size_label = getattr(cls, '_size_label', {})
+        if hasattr(size_label, 'keys') and v not in size_label:
+            msg = f"Size {v} not supported for the dataset, expected: {size_label.keys()}"
             raise ValueError(msg)
         return v
 
@@ -102,7 +104,8 @@ class CustomDataset(BaseDataset):
     scalar_labels_file: str = "scalar_labels.parquet"
     label_percentages: list[float] = []
 
-    @validator("size")
+    @field_validator("size")
+    @classmethod
     def verify_size(cls, v: int):
         return v
 

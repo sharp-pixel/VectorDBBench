@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-from pydantic import BaseModel, SecretStr, validator
+from pydantic import BaseModel, SecretStr, field_validator
 
 from ..api import DBCaseConfig, DBConfig, IndexType, MetricType
 
@@ -31,9 +31,10 @@ class OceanBaseConfig(DBConfig):
             "database": self.database,
         }
 
-    @validator("*")
-    def not_empty_field(cls, v: any, field: any):
-        if field.name in ["password", "host", "db_label"]:
+    @field_validator("*", mode="before")
+    @classmethod
+    def not_empty_field(cls, v: any, info):
+        if info.field_name in ["password", "host", "db_label"]:
             return v
         if isinstance(v, str | SecretStr) and len(v) == 0:
             raise ValueError("Empty string!")

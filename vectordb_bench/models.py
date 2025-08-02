@@ -1,3 +1,9 @@
+"""VectorDBBench data models and configuration classes.
+
+This module contains the core data models, enums, and configuration classes
+used throughout the VectorDBBench application for managing test cases,
+database configurations, and benchmark results.
+"""
 import logging
 import pathlib
 from datetime import date, datetime
@@ -24,16 +30,19 @@ log = logging.getLogger(__name__)
 
 
 class LoadTimeoutError(TimeoutError):
+    """Exception raised when a capacity case load operation times out."""
     def __init__(self, duration: int):
         super().__init__(f"capacity case load timeout in {duration}s")
 
 
 class PerformanceTimeoutError(TimeoutError):
+    """Exception raised when a performance case optimize operation times out."""
     def __init__(self):
         super().__init__("Performance case optimize timeout")
 
 
 class ConcurrencySlotTimeoutError(TimeoutError):
+    """Exception raised when waiting for a concurrency slot times out."""
     def __init__(self):
         super().__init__("Timeout while waiting for a concurrency slot to become available")
 
@@ -132,10 +141,12 @@ class CaseConfigParamType(Enum):
 
 
 class CustomizedCase(BaseModel):
+    """Model for customized test cases."""
     pass
 
 
 class ConcurrencySearchConfig(BaseModel):
+    """Configuration for concurrency search parameters."""
     num_concurrency: list[int] = config.NUM_CONCURRENCY
     concurrency_duration: int = config.CONCURRENCY_DURATION
     concurrency_timeout: int = config.CONCURRENCY_TIMEOUT
@@ -162,14 +173,17 @@ class CaseConfig(BaseModel):
     '''
 
     def __hash__(self) -> int:
-        return hash(self.json())
+        """Return hash of the case configuration."""
+        return hash(self.model_dump_json())
 
     @property
     def case(self) -> Case:
+        """Get the case instance for this configuration."""
         return self.case_id.case_cls(self.custom_case)
 
     @property
     def case_name(self) -> str:
+        """Get the name of the case."""
         return self.case.name
 
 
@@ -182,6 +196,7 @@ class TaskStage(StrEnum):
     SEARCH_CONCURRENT = "search_concurrent"
 
     def __repr__(self) -> str:
+        """Return string representation of the task stage."""
         return str.__repr__(self.value)
 
 
@@ -195,6 +210,7 @@ ALL_TASK_STAGES = [
 
 
 class TaskConfig(BaseModel):
+    """Configuration for benchmark task execution."""
     db: DB
     db_config: DBConfig
     db_case_config: DBCaseConfig
@@ -203,6 +219,7 @@ class TaskConfig(BaseModel):
 
     @property
     def db_name(self):
+        """Get the formatted database name including label and version."""
         db_name = f"{self.db.value}"
         db_label = self.db_config.db_label
         if db_label:
@@ -214,18 +231,21 @@ class TaskConfig(BaseModel):
 
 
 class ResultLabel(Enum):
+    """Labels for test result status."""
     NORMAL = ":)"
     FAILED = "x"
     OUTOFRANGE = "?"
 
 
 class CaseResult(BaseModel):
+    """Result of a single test case execution."""
     metrics: Metric
     task_config: TaskConfig
     label: ResultLabel = ResultLabel.NORMAL
 
 
 class TestResult(BaseModel):
+    """Complete test result containing multiple case results."""
     run_id: str
     task_label: str
     results: list[CaseResult]
@@ -234,6 +254,7 @@ class TestResult(BaseModel):
     timestamp: float = 0.0
 
     def flush(self):
+        """Write test results to disk organized by database."""
         db2case = self.get_db_results()
         timestamp = datetime.combine(date.today(), datetime.min.time()).timestamp()
         result_root = config.RESULTS_LOCAL_DIR
@@ -250,6 +271,7 @@ class TestResult(BaseModel):
             )
 
     def get_db_results(self) -> dict[DB, CaseResult]:
+        """Group test results by database type."""
         db2case = {}
         for res in self.results:
             if res.task_config.db in db2case:
@@ -259,6 +281,7 @@ class TestResult(BaseModel):
         return db2case
 
     def write_db_file(self, result_dir: pathlib.Path, partial: Self, db: str):
+        """Write database-specific results to a JSON file."""
         if not result_dir.exists():
             log.info(f"local result directory not exist, creating it: {result_dir}")
             result_dir.mkdir(parents=True)
@@ -274,6 +297,7 @@ class TestResult(BaseModel):
             f.write(b)
 
     def get_case_config(case_config: CaseConfig) -> dict[CaseConfig]:
+        """Convert case configuration for backward compatibility."""
         if case_config["case_id"] in {6, 7, 8, 9, 12, 13, 14, 15}:
             case_instance = type2case[CaseType(case_config["case_id"])]()
             custom_case = case_config["custom_case"]
@@ -290,6 +314,7 @@ class TestResult(BaseModel):
 
     @classmethod
     def read_file(cls, full_path: pathlib.Path, trans_unit: bool = False) -> Self:
+        """Read test results from a JSON file."""
         if not full_path.exists():
             msg = f"No such file: {full_path}"
             raise ValueError(msg)
@@ -309,7 +334,9 @@ class TestResult(BaseModel):
                 raw_case_cfg = task_config.get("db_case_config") or {}
                 index_value = raw_case_cfg.get("index", None)
                 try:
-                    task_config["db_case_config"] = db.case_config_cls(index_type=index_value)(**raw_case_cfg)
+                    task_config["db_case_config"] = db.case_config_cls(
+                        index_type=index_value
+                    )(**raw_case_cfg)
                 except Exception:
                     log.exception(f"Couldn't get class for index '{index_value}' ({full_path})")
                     task_config["db_case_config"] = EmptyDBCaseConfig(**raw_case_cfg)
@@ -337,9 +364,10 @@ class TestResult(BaseModel):
                     else:
                         # Default to 0 for older result files that don't have P95 data
                         case_result["metrics"]["serial_latency_p95"] = 0.0
-            return TestResult.validate(test_result)
+            return TestResult.model_validate(test_result)
 
     def display(self, dbs: list[DB] | None = None):
+        """Display test results in a formatted table."""
         filter_list = dbs if dbs and isinstance(dbs, list) else None
         sorted_results = sorted(
             self.results,
@@ -351,16 +379,17 @@ class TestResult(BaseModel):
             reverse=True,
         )
 
-        filtered_results = [r for r in sorted_results if not filter_list or r.task_config.db not in filter_list]
+        filtered_results = [
+            r for r in sorted_results
+            if not filter_list or r.task_config.db not in filter_list
+        ]
         if len(filtered_results) == 0:
             return
 
-        def append_return(x: any, y: any):
-            x.append(y)
-            return x
-
         max_db = max(map(len, [f.task_config.db.name for f in filtered_results]))
-        max_db_labels = max(map(len, [f.task_config.db_config.db_label for f in filtered_results])) + 3
+        max_db_labels = max(
+            map(len, [f.task_config.db_config.db_label for f in filtered_results])
+        ) + 3
         max_case = max(map(len, [f.task_config.case_config.case_name for f in filtered_results]))
         max_load_dur = max(map(len, [str(f.metrics.load_duration) for f in filtered_results])) + 3
         max_qps = max(map(len, [str(f.metrics.qps) for f in filtered_results])) + 3
